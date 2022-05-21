@@ -1,0 +1,16 @@
+{
+  "name": "phonebook",
+  "version": "1.0.0",
+  "description": "a backend project for storing and managing phone contacts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "phonebook",
+    "contact_book",
+    "contact_managing_app"
+  ],
+  "author": "owais_anwar",
+  "license": "ISC"
+}
