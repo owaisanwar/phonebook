@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
   },
   "keywords": [
     "phonebook",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "dotenv": "^16.0.1",
+    "eslint": "^8.16.0",
     "nodemon": "^2.0.16"
   },
   "engines": {
