@@ -1,9 +1,10 @@
 const express = require('express');
-// require('dotenv').config();
+require('dotenv').config();
 const app = express();
 app.use(express.json())
 const cors = require('cors');
 app.use(cors())
+const Contact = require('./models/contact')
 let morgan = require('morgan');
 function customMorganFormat(tokens, req, res) {
     return [
@@ -16,29 +17,9 @@ function customMorganFormat(tokens, req, res) {
     ].join(' ');
 }
 app.use(morgan(customMorganFormat))
+
 // Cors : Cross Origin Resource Sharing
-let phoneBookEntries = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+
 function generateId() {
     const id = phoneBookEntries.length;
     console.log("🚀 ~ file: index.js ~ line 66 ~ generateId ~ id", id)
@@ -51,7 +32,9 @@ app.get('/', function(request,response) {
 })
 
 app.get('/api/persons' , (request, response) => {
-    return response.status(200).json(phoneBookEntries);
+    return Contact.find({}).then(result => {
+        response.json(result)
+    })
 })
 
 app.get('/info', (request, response) => {
@@ -59,42 +42,57 @@ app.get('/info', (request, response) => {
     
 })
 
-app.get('/api/persons/:id', (request, response) => {
-    const id = +request.params.id;
-    const person = phoneBookEntries.find(item => item.id === id)
-    if(person) {
-        return response.json(person).status(200);
-    } else return response.status(404).end('<h1>Person not found</h1>');
+app.get('/api/persons/:id', (request, response, next) => {
+    Contact.findById(request.params.id).then(contact => {
+        if(contact) {
+            return response.json(contact)
+        } else {
+            return response.status(404).end()
+        }
+    }).catch(error => next(error))
 })
-
-app.delete('/api/persons/:id', (request, response) => {
-    const id = +request.params.id;
-    phoneBookEntries = phoneBookEntries.filter(item => item.id !== id);
-    return response.status(204).end();
+app.delete('/api/persons/:id', (request, response, next) => {
+     return Contact.findByIdAndRemove(request.params.id).then(result => {
+         response.status(204).end();
+     })
+     .catch(error => next(error))
 })
-
-app.post('/api/persons', (request, response) => {
-    const body = request.body;
-    body.id = generateId();
-    // console.log("🚀 ~ file: index.js ~ line 57 ~ app.post ~ body", body)
-    const findEntry = phoneBookEntries.find(entry => entry.name === body.name)
-    if(findEntry) {
-        return response.status(404).json({
-            'error' : 'name must be unique'
-        })
-    } else {
-        phoneBookEntries = phoneBookEntries.concat(body)
-        return response.status(200).json({
-            'success' : true,
-            'message' : 'entry added successfully'
+app.put('/api/persons/:id', (request, response, next) => {
+    const {name, number} = request.body;
+   
+    return Contact.findByIdAndUpdate(request.params.id, {name, number}, { new: true, runValidators : true, context: true}).then(result => {
+        response.json(result);
+    }).catch(error => next(error))
+})
+const errorHandler = (error, req, res, next) => {
+    console.log("🚀 ~ file: index.js ~ line 76 ~ errorHandler ~ error", error.name)
+    if(error.name === 'CastError') {
+        return res.status(400).send({error : error.message})
+    } else if (error.name === 'ValidationError') {
+        return res.status(400).send({
+            error : error.message
         })
     }
+    next(error);
+}
+
+
+app.post('/api/persons', (request, response,next) => {
+    const body = request.body;
+    const person = new Contact({
+        name : body.name,
+        number : body.number
+    })
+    return person.save().then(result => {
+        response.json(result);
+    }).catch(error => next(error))
 }) 
 
 const unknownEndpoint = (request, response) => {
     response.status(404).send({ error: 'unknown endpoint' })
 }
 app.use(unknownEndpoint);
+app.use(errorHandler);
 
 
 const port = process.env.PORT || 3001
