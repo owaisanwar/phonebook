@@ -1,5 +1,6 @@
 const config = require('./utils/config')
 const express = require('express');
+require('express-async-errors')
 const app = express();
 const personsRouter = require('./controllers/persons');
 const middleware = require('./utils/middleware')

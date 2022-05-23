@@ -10,7 +10,7 @@ mongoose.connect(url).then(result => {
 const contactSchema = new mongoose.Schema({
     name : {
         type : String,
-        minlength : 5,
+        minlength : 3,
         required : true
     },
     number : {
