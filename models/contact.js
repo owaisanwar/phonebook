@@ -16,6 +16,10 @@ const contactSchema = new mongoose.Schema({
     number : {
         type : String,
         required : true
+    },
+    user : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'User'
     }
 })
 const Contact = new mongoose.model('PhoneBook', contactSchema);

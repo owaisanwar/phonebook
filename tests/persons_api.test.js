@@ -4,6 +4,17 @@ const app = require('../app');
 const Contact = require('../models/contact');
 const helper = require('./test_helper');
 const api = supertest(app);
+
+const jwt = require('jsonwebtoken');
+const User = require('../models/user');
+
+const getTokenFrom = request => {
+    const authorization = request.get('authorization')
+    if(authorization && authorization.toLowerCase().startWith('bearer ')) {
+        return authorization.substr(7)
+    }
+    return null
+}
 const {initialPersons, personsInDb} = helper;
 beforeEach(async() => {
     await Contact.deleteMany({});
@@ -30,12 +41,19 @@ test('a specific person is within the returned persons', async() => {
     const contacts = response.body.map(r => r.name);
     expect(contacts).toContain('Hamza');
 })
-const newPerson = {
-    name: 'Anas Raza',
-    number : '+92 3403222311'
-}
+
 test('a valid person can be added', async() => {
-    await api.post('/api/persons').send(newPerson).expect(201).expect('Content-Type', /application\/json/)
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im93YWlzYW53YXIiLCJpZCI6IjYyOGY4YTA4OTlkM2I1NmE0MTY4M2Y2NCIsImlhdCI6MTY1MzU3NDE3Mn0.o4OnEcm05hGx5qQQDPe9Hg_bCawO97baqQsvzQNSgLs';
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+
+    const user = await User.findById(decodedToken.id)
+
+    const newPerson = {
+        name: 'Anas Raza',
+        number : '+92 3403222311',
+        user : user._id
+    }
+    const res = await api.post('/api/persons').send(newPerson).expect(201).expect('Content-Type', /application\/json/)
     const response = await personsInDb();
     const names = response.map(r => r.name);
     expect(response).toHaveLength(initialPersons.length + 1)
@@ -44,10 +62,19 @@ test('a valid person can be added', async() => {
 })
 
 test('a person without name cannot be saves', async () => {
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im93YWlzYW53YXIiLCJpZCI6IjYyOGY4YTA4OTlkM2I1NmE0MTY4M2Y2NCIsImlhdCI6MTY1MzU3NDE3Mn0.o4OnEcm05hGx5qQQDPe9Hg_bCawO97baqQsvzQNSgLs';
+    
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+    console.log("🚀 ~ file: persons_api.test.js ~ line 71 ~ test ~ decodedToken", decodedToken)
+    
+    const user = await User.findById(decodedToken.id);
+
     const personWithoutName = {
-        number : "938493849"
+        number : "938493849",
+        user : user._id
     }
-    await api.post('/api/persons').send(personWithoutName).expect(400)
+    console.log("🚀 ~ file: persons_api.test.js ~ line 77 ~ test ~ personWithoutName", personWithoutName)
+    const res = api.post('/api/persons').send(personWithoutName).expect(400)
     const response = await personsInDb();
     expect(response).toHaveLength(initialPersons.length);
 })
@@ -55,7 +82,6 @@ test('a person without name cannot be saves', async () => {
 test('a specific person can be viewed', async() => {
     const personToView = await personsInDb();
     const person = personToView[0];
-    console.log("🚀 ~ file: persons_api.test.js ~ line 58 ~ test ~ person", person)
     const res = await api.get(`/api/persons/${person.id}`)
     .expect(200)
     .expect('Content-Type', /application\/json/)
